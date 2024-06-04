@@ -1,95 +1,66 @@
-import Image from "next/image";
-import styles from "./page.module.css";
+"use client";
 
-export default function Home() {
+import React, { useState, useEffect } from 'react';
+import { PublicKey } from '@solana/web3.js';
+import { connectWallet, unstakeLigmaTokens } from '../util/unstake';
+
+const Home: React.FC = () => {
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [amount, setAmount] = useState('')
+  const [text, setText] = useState('')
+
+  useEffect(() => {
+    const checkIfWalletIsConnected = async () => {
+      if ('solana' in window) {
+        const { solana } = window as any;
+        if (solana.isPhantom) {
+          try {
+            const response = await solana.connect({ onlyIfTrusted: true });
+            console.log('Wallet already connected')
+            setWalletAddress(response.publicKey.toString());
+
+          } catch (error) {
+            console.error(error)
+          }
+        }
+      }
+    };
+    checkIfWalletIsConnected();
+  }, []);
+
+  const handleConnectWallet = async () => {
+    const address = await connectWallet();
+    if (address) {
+      setWalletAddress(address);
+    }
+  };
+
+  const handleUnstakeLigma = async () => {
+    if (walletAddress) {
+      try {
+        const signature = await unstakeLigmaTokens(new PublicKey(walletAddress), parseFloat(amount));
+        setText('https://solscan.io/tx/' + signature);
+      } catch (err) {
+        console.error('Transaction failed!', err);
+      }
+    }
+  };
+
   return (
-    <main className={styles.main}>
-      <div className={styles.description}>
-        <p>
-          Get started by editing&nbsp;
-          <code className={styles.code}>src/app/page.tsx</code>
-        </p>
-        <div>
-          <a
-            href="https://vercel.com?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            By{" "}
-            <Image
-              src="/vercel.svg"
-              alt="Vercel Logo"
-              className={styles.vercelLogo}
-              width={100}
-              height={24}
-              priority
-            />
-          </a>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: '100px' }}>
+      <h1>Unstake Your Ligma Tokens</h1>
+      {!walletAddress ? (
+        <button onClick={handleConnectWallet}>Connect Wallet</button>
+      ) : (
+        <div style={{display: 'flex', flexDirection: 'column', padding: 20, gap: 5, maxWidth: 300}}>
+          <label htmlFor="input">xligma token amount</label>
+          <input type="text" placeholder='50000' value={amount} onChange={e => setAmount(e.target.value)}/>
+          <button onClick={handleUnstakeLigma}>Unstake Ligma</button>
+          <p style={{wordWrap: 'break-word'}}>{text}</p>
         </div>
-      </div>
-
-      <div className={styles.center}>
-        <Image
-          className={styles.logo}
-          src="/next.svg"
-          alt="Next.js Logo"
-          width={180}
-          height={37}
-          priority
-        />
-      </div>
-
-      <div className={styles.grid}>
-        <a
-          href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Docs <span>-&gt;</span>
-          </h2>
-          <p>Find in-depth information about Next.js features and API.</p>
-        </a>
-
-        <a
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Learn <span>-&gt;</span>
-          </h2>
-          <p>Learn about Next.js in an interactive course with&nbsp;quizzes!</p>
-        </a>
-
-        <a
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Templates <span>-&gt;</span>
-          </h2>
-          <p>Explore starter templates for Next.js.</p>
-        </a>
-
-        <a
-          href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template&utm_campaign=create-next-app"
-          className={styles.card}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <h2>
-            Deploy <span>-&gt;</span>
-          </h2>
-          <p>
-            Instantly deploy your Next.js site to a shareable URL with Vercel.
-          </p>
-        </a>
-      </div>
-    </main>
+      )}
+    </div>
   );
-}
+};
+
+export default Home;
